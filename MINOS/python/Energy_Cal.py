@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
-import matplotlib.dates as md
+from MINOS_analysis import database
 import os
 from scipy.optimize import curve_fit
 import scipy.interpolate as interpolate
@@ -35,72 +35,6 @@ def generate_calibration_axis(bins1, energies1):
     return energy_data
 
 
-global database
-
-
-class database(object):  # database class
-
-    def __init__(self, DBfilename):
-        self.conn = sqlite3.connect(DBfilename)
-        self.conn.row_factory = sqlite3.Row
-
-    def getTables(self):
-        c = self.conn.cursor()
-        c.execute("select name from sqlite_master where type = 'table'")
-        self.tables = c.fetchall()
-        c.close()
-
-    def getHeader(self, tblname):
-        c = self.conn.cursor()
-        c.execute("select rowid,* from %s" % (tblname))
-        self.header = np.array(c.fetchone().keys())
-        c.close()
-
-    def getAllData(self, tblname):
-        c = self.conn.cursor()
-        c.execute("select rowid,* from %s order by Time asc" % (tblname))
-        self.data = self.tableToArray(c)
-        c.close()
-
-    def getSomeData(self, tblname, label, t0, tf):
-        c = self.conn.cursor()
-        c.execute("select rowid,* from %s where %s>=%.1f and %s<%.1f" % (tblname, label, t0, label, tf))
-        self.data = self.tableToArray(c)
-        return
-
-    def getSomeDataIf(self, tblname, label, t0, tf, x):
-        c = self.conn.cursor()
-        c.execute(
-            "select rowid,* from %s where %s>=%.1f and %s<%.1f and Gate1=%d " % (tblname, label, t0, label, tf, x))
-        self.data = self.tableToArray(c)
-        return
-
-    def getColumn(self, tbleName, column):
-        c = self.conn.cursor()
-        c.execute("select %s from %s" % (column, tbleName))
-        self.data = c.fetchall()
-        c.close()
-
-    def getFirstAndLastRow(self, tblname):
-        c = self.conn.cursor()
-        c.execute("select rowid,* from %s order by rowid asc limit 1" % (tblname))
-        firstRow = self.tableToArray(c)
-        c.execute("select rowid,* from %s order by rowid desc limit 1" % (tblname))
-        lastRow = self.tableToArray(c)
-        return firstRow, lastRow
-
-    def tableToArray(self, c):
-        rows = c.fetchall()
-        data = []
-        for i in range(len(rows)):
-            data.append(list(rows[i]))
-        return data
-
-    def closeConn(self):
-        self.conn.close()
-        self.data = []
-
-
 # Gaussian + line
 def peakFunc(x, a, b, c, mu, sigma):
     '''
@@ -114,12 +48,8 @@ def peakFunc(x, a, b, c, mu, sigma):
             b * np.exp(-(x - mu) ** 2 / (2.0 * sigma ** 2))
     )
 
-
+'''
 def getIsotopeEnergies_large(isotope):
-    '''
-    Description: Provides energy and ROI for isotope.
-    Param: isotope = string (e.g. 'Cs-137')
-    '''
     peaks = [];
     peak_windows_lower = [];
     peak_windows_upper = []
@@ -163,7 +93,7 @@ def getIsotopeEnergies_large(isotope):
         peak_windows_upper.append(55)
         peaks.append(121.78)
         peak_windows_lower.append(100)
-        peak_windows_upper.append(140)
+        peak_windows_upper.append(170)
         peaks.append(344.29)
         peak_windows_lower.append(300)
         peak_windows_upper.append(390)
@@ -194,7 +124,47 @@ def getIsotopeEnergies_large(isotope):
         peak_windows_lower.append(785)
         peak_windows_upper.append(850)
     return peaks, peak_windows_lower, peak_windows_upper
+'''
+def getIsotopeEnergies_large(isotope):
+    '''
+    Description: Provides energy and ROI for isotope.
+    Param: isotope = string (e.g. 'Cs-137')
+    '''
+    peaks = [];
+    peak_windows_lower = [];
+    peak_windows_upper = []
+    if isotope == "Cs-137":
+        peaks.append(32) #
+        peak_windows_lower.append(22)
+        peak_windows_upper.append(42)
+        peaks.append(450.0) # 662
+        peak_windows_lower.append(400)
+        peak_windows_upper.append(500)
+    elif isotope == "Th-232":
+        peaks.append(1725.0) # 2614
+        peak_windows_lower.append(1650)
+        peak_windows_upper.append(1830)
+    elif isotope == "Eu-152":
+        peaks.append(88)
+        peak_windows_lower.append(74)
+        peak_windows_upper.append(100)
+        peaks.append(240) # 344.2785
+        peak_windows_lower.append(210)
+        peak_windows_upper.append(275)
+        peaks.append(650) # 964.079
+        peak_windows_lower.append(615)
+        peak_windows_upper.append(698)
+        peaks.append(760) # 1112.074
+        peak_windows_lower.append(699)
+        peak_windows_upper.append(820)
+        peaks.append(940) #1408
+        peak_windows_lower.append(880)
+        peak_windows_upper.append(1050)
+    return peaks, peak_windows_lower, peak_windows_upper
 
+energy_conversion = {'88':121.7817,'240':344.2785,'650':940.079,'760':1112.074,'940':1408.006,\
+                     '1725.0':2614,\
+                     '32':32,'450.0':661.7}
 
 inPath = '/Volumes/IAN USB/MINOS/Energy Calibration/C23_10.18.2018/'
 energy = np.genfromtxt(inPath + 'Example_Energy_Pairs.json', delimiter=',')
@@ -202,6 +172,7 @@ energy = np.array(energy)
 dbFiles = [x for x in os.listdir(inPath) if '.sqlite3' in x]
 dbFiles = ['archerair2012-Characterization_C23_Cs137_Eu152-2018-10-18T15.58.32.839.sqlite3']
 
+savePath = '/Users/i6o/MINOS/MINOS Nodes/Energy Calibration/'
 for dbFile in dbFiles:
     print dbFile
     detDB = database(inPath + dbFile)
@@ -236,11 +207,11 @@ for dbFile in dbFiles:
     Energy Calibration Section
     '''
 
-    source_names = ['Th232', 'Cs-137', 'Eu-152']
+    source_names = ['Th-232', 'Cs-137', 'Eu-152']
 
     calibration_energies_pairs_MUSE01 = {}  # {energy_keV:channel,...}
     calibration_energies_pairs_MUSE12 = {}
-    colors = ['g','r','k','y','m','c','orange']
+    colors = ['g','r','k','y','m','c','orange','purple','grey','darkred','plum','tan']
     plotIt = True
     first = True
     count = 0
@@ -251,26 +222,73 @@ for dbFile in dbFiles:
         for z in range(len(peaks)):
 
             j, k, l = (peaks[z], peak_windows_lower[z], peak_windows_upper[z])
-            indexs = np.where((energy > k) & (energy < l))
-
+            #indexs = np.where((energy > k) & (energy < l))
+            indexs = np.where((np.arange(0,2048) > k) & (np.arange(0,2048) < l))
+            '''
+            fig, ax = plt.subplots(nrows=2)
+            ax[0].plot(total_spectra_MUSE01, 'b',linewidth=0.75, label='MUSE01');
+            ax[0].plot(indexs[0],total_spectra_MUSE01[indexs[0]],'k--',linewidth=1)
+            ax[0].set_yscale('log');
+            ax[0].legend()
+            ax[1].plot(total_spectra_MUSE12, 'r',linewidth=0.5, label='MUSE12');
+            ax[1].plot(indexs[0],total_spectra_MUSE12[indexs[0]],'k--',linewidth=1)
+            ax[1].set_yscale('log');
+            ax[1].legend()
+            plt.show()
+            '''
             spec = total_spectra_MUSE01[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
-            e = np.arange(1,2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            channel_spec = np.arange(1,2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             a = spec[-1]
             b = np.max(spec) - spec[0]
-            c = -1.0 * np.abs(spec[0] - spec[-1]) / (energy[-1] - energy[0])
-            mu = e[np.argmax(spec)]
-            sigma = 0.9
+            c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
+            mu = channel_spec[np.argmax(spec)]
+            sigma = 5
             p0 = [a, b, c, mu, sigma]
-            popt, pcov = curve_fit(peakFunc, e, spec, p0=p0)
+            popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
             popt[4] = np.abs(popt[4])
-            channel = (np.abs(e - e[np.argmax(peakFunc(e, *popt))])).argmin()
+            channel = (np.abs(channel_spec - channel_spec[np.argmax(peakFunc(channel_spec, *popt))])).argmin()+channel_spec[0]
+            j = energy_conversion[str(j)]
             if j not in calibration_energies_pairs_MUSE01.keys():
                 calibration_energies_pairs_MUSE01[j] = [channel]
             else:
                 calibration_energies_pairs_MUSE01[j].append(channel)
 
-            spec = total_spectra_MUSE12[indexs[0][0] / 2:indexs[0][len(indexs[0]) - 1] / 2]
-            channel_spec = np.arange(indexs[0][0] / 2, indexs[0][len(indexs[0]) - 1] / 2)
+
+            if plotIt:
+                '''
+                Plots fitted data on top of spectra
+                '''
+
+                string = str(j) + ' ; ' +str(name)
+                if first:
+                    plt.figure(1)
+                    first = False
+                plt.plot(indexs[0], peakFunc(indexs[0], *popt),color=colors[count],linestyle='--', label=string, zorder=10)
+            count+=1
+    if plotIt:
+        plt.figure(1)
+        plt.plot(total_spectra_MUSE01, zorder=0)
+        plt.yscale('log')
+        plt.legend()
+        plt.title('MUSE01')
+        plt.grid(True, which='both',alpha=0.5)
+        plt.savefig(savePath+'MUSE01_calibration.png',dpi=600)
+        plotDiagnostics = False
+
+    first = True
+    count = 0
+    for i in range(len(source_names)):
+        name = source_names[i]
+        peaks, peak_windows_lower, peak_windows_upper = getIsotopeEnergies_large(source_names[i])
+        print '\t Fitting isotope:\t%s' % (source_names[i])
+        for z in range(len(peaks)):
+
+            j, k, l = (peaks[z], peak_windows_lower[z], peak_windows_upper[z])
+            #indexs = np.where((energy > k) & (energy < l))
+            indexs = np.where((np.arange(0,2048) > k) & (np.arange(0,2048) < l))
+
+            spec = total_spectra_MUSE12[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            channel_spec = np.arange(1, 2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             a = spec[-1]
             b = np.max(spec) - spec[0]
             c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
@@ -279,8 +297,9 @@ for dbFile in dbFiles:
             p0 = [a, b, c, mu, sigma]
             popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
             popt[4] = np.abs(popt[4])
-            channel = (np.abs(np.arange(0, len(total_spectra_MUSE12)) - channel_spec[
-                np.argmax(peakFunc(channel_spec, *popt))])).argmin()
+            channel = (np.abs(np.arange(channel_spec[0],channel_spec[-1]) - channel_spec[
+                np.argmax(peakFunc(channel_spec, *popt))])).argmin()+channel_spec[0]
+            j = energy_conversion[str(j)]
             if j not in calibration_energies_pairs_MUSE12.keys():
                 calibration_energies_pairs_MUSE12[j] = [channel]
             else:
@@ -291,88 +310,51 @@ for dbFile in dbFiles:
                 Plots fitted data on top of spectra
                 '''
 
-                string = str(j) + ' ; ' +str(name)
+                string = str(j) + ' ; ' + str(name)
                 if first:
-                    plt.figure()
+                    plt.figure(2)
                     first = False
-                plt.plot(e, peakFunc(e, *popt),color=colors[count],linestyle='--', label=string, zorder=10)
-            count+=1
+                plt.plot(channel_spec, peakFunc(channel_spec, *popt), color=colors[count], linestyle='--', label=string, zorder=10)
+            count += 1
     if plotIt:
-        plt.plot(total_spectra_MUSE01, zorder=0)
-        plt.yscale('log')
-        plt.legend()
-        plt.grid(True, which='both')
-        plt.title('MUSE01')
-
-        plotDiagnostics = False
-
-    for i in range(len(source_names)):
-        spec = total_spectra_MUSE12[indexs[0][0] / 2:indexs[0][len(indexs[0]) - 1] / 2]
-        channel_spec = np.arange(indexs[0][0] / 2, indexs[0][len(indexs[0]) - 1] / 2)
-        a = spec[-1]
-        b = np.max(spec) - spec[0]
-        c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
-        mu = channel_spec[np.argmax(spec)]
-        sigma = 1.5
-        p0 = [a, b, c, mu, sigma]
-        popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
-        popt[4] = np.abs(popt[4])
-        channel = (np.abs(np.arange(0, len(total_spectra_MUSE12)) - channel_spec[
-            np.argmax(peakFunc(channel_spec, *popt))])).argmin()
-        if j not in calibration_energies_pairs_MUSE12.keys():
-            calibration_energies_pairs_MUSE12[j] = [channel]
-        else:
-            calibration_energies_pairs_MUSE12[j].append(channel)
-
-        if plotIt:
-            '''
-            Plots fitted data on top of spectra
-            '''
-
-            string = str(j) + ' ; ' + str(name)
-            if first:
-                plt.figure()
-                first = False
-            plt.plot(e, peakFunc(e, *popt), color=colors[count], linestyle='--', label=string, zorder=10)
-        count += 1
-    if plotIt:
+        plt.figure(2)
         plt.plot(total_spectra_MUSE12, zorder=0)
         plt.yscale('log')
         plt.legend()
         plt.title('MUSE12')
-        plt.grid(True, which='both')
+        plt.grid(True, which='both',alpha=0.5)
+        plt.savefig(savePath+'MUSE12_calibration.png',dpi=600)
 
     '''
     Creating energy pairs
     '''
-    energy_values_MUSE01 = [];
-    energy_channel_MUSE01 = []
+    energy_MUSE01 = [];  energy_MUSE01.append(0.0)
+    channel_MUSE01 = []; channel_MUSE01.append(0)
+    energy_MUSE12 = [];  energy_MUSE12.append(0.0)
+    channel_MUSE12 = []; channel_MUSE12.append(0)
+
     for i in calibration_energies_pairs_MUSE01:
-        if len(calibration_energies_pairs_MUSE01[i]) == 1:
-            energy_values_MUSE01.append(i)
-            energy_channel_MUSE01.append(int(calibration_energies_pairs_MUSE01[i][0]))
-        else:
-            energy_values_MUSE01.append(i)
-            energy_channel_MUSE01.append(int(np.mean(calibration_energies_pairs_MUSE01[i])))
-    energy_pairs_MUSE01 = generate_calibration_axis(energy_channel_MUSE01, energy_values_MUSE01)
-    '''
-    energy_values_MUSE12 = [];
-    energy_channel_MUSE12 = []
+        energy_MUSE01.append(float(i))
+        channel_MUSE01.append(calibration_energies_pairs_MUSE01[i][0])
     for i in calibration_energies_pairs_MUSE12:
-        if len(calibration_energies_pairs_MUSE12[i]) == 1:
-            energy_values_MUSE12.append(i)
-            energy_channel_MUSE12.append(int(calibration_energies_pairs_MUSE12[i][0]))
-        else:
-            energy_values_MUSE12.append(i)
-            energy_channel_MUSE12.append(int(np.mean(calibration_energies_pairs_MUSE12[i])))
-    energy_pairs_MUSE12 = generate_calibration_axis(energy_channel_MUSE12, energy_values_MUSE12)
-    '''
-    '''
+        energy_MUSE12.append(float(i))
+        channel_MUSE12.append(calibration_energies_pairs_MUSE12[i][0])
+
+    energy_MUSE01 = sorted(energy_MUSE01)
+    energy_MUSE12 = sorted(energy_MUSE12)
+    channel_MUSE01 = sorted(channel_MUSE01)
+    channel_MUSE12 = sorted(channel_MUSE12)
+
+    # Manually creating Channels and energies for spline for specific MUSE node
+    channels = np.array(channel_MUSE12); channels = np.delete(channels,5)
+    energies = np.array(energy_MUSE12) ; energies = np.delete(energies,5)
+
     us = UnivariateSpline(channels[0:-1],energies[0:-1],k=2,s=0.0,ext=0)
     interp = us(np.arange(0,channels[-2]))
     ext = np.polyfit(np.array([channels[-2],channels[-1]]),np.array([energies[-2],energies[-1]]),1)
     extrap = np.polyval(ext, np.arange(channels[-2], 2048))
     cs = np.concatenate([interp,extrap])
+    np.save(savePath + 'eCal_MUSE12_updated.npy',cs)
     x_range = np.arange(len(cs))
     fig,axes = plt.subplots(2,1)
     axes[0].plot(x_range, np.array(cs), label='Cubic Spline')
@@ -385,8 +367,8 @@ for dbFile in dbFiles:
     axes[1].grid(alpha=0.5)
     axes[1].set_xlabel('Channel')
     axes[1].set_ylabel('Channel/Energy')
-    fig.tight_layout()  
-    '''
+    fig.tight_layout()
+    plt.savefig(savePath+'Calibration_Pairs_MUSE12.png',dpi=600)
 
 if (plotIt or plotDiagnostics):
-    plt.show()
+    plt.show(False)

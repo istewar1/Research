@@ -140,6 +140,20 @@ def getIsotopeEnergies_large(isotope):
         peaks.append(450.0) # 662
         peak_windows_lower.append(400)
         peak_windows_upper.append(500)
+    elif isotope == "Co-60":
+        peaks.append(1173.0)
+        peak_windows_lower.append(1050)
+        peak_windows_upper.append(1240)
+        peaks.append(1332.0)
+        peak_windows_lower.append(1250)
+        peak_windows_upper.append(1420)
+    elif isotope == "Ba-133":
+        peaks.append(80.0)
+        peak_windows_lower.append(60)
+        peak_windows_upper.append(100)
+        peaks.append(356.0)
+        peak_windows_lower.append(320)
+        peak_windows_upper.append(450)
     elif isotope == "Th-232":
         peaks.append(1725.0) # 2614
         peak_windows_lower.append(1650)
@@ -166,42 +180,51 @@ energy_conversion = {'88':121.7817,'240':344.2785,'650':940.079,'760':1112.074,'
                      '1725.0':2614,\
                      '32':32,'450.0':661.7}
 
-inPath = '/Volumes/IAN USB/MINOS/Energy Calibration/C23_10.18.2018/'
-energy = np.genfromtxt(inPath + 'Example_Energy_Pairs.json', delimiter=',')
-energy = np.array(energy)
+inPath = '/Volumes/IAN USB/WIND/GADRAS dat Creation/'
+#energy = np.genfromtxt(inPath + 'Example_Energy_Pairs.json', delimiter=',')
+#energy = np.array(energy)
 dbFiles = [x for x in os.listdir(inPath) if '.sqlite3' in x]
-dbFiles = ['archerair2012-Characterization_C23_Cs137_Eu152-2018-10-18T15.58.32.839.sqlite3']
+dbFiles = ['archerair2012-WIND_EnergyCal_Eu152_Cs137-2018-10-30T15.49.20.526.sqlite3']
 
-savePath = '/Users/i6o/MINOS/MINOS Nodes/Energy Calibration/'
+savePath = inPath
 for dbFile in dbFiles:
     print dbFile
     detDB = database(inPath + dbFile)
 
-    dataTable = 'MUSE01_data'
+    dataTable = 'Det1_BR_4in_data'
     detDB.getColumn(dataTable, 'Spectrum__IntArray')
-    spectra_MUSE01 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
+    spectra_Det1 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
     detDB.getColumn(dataTable, 'Time')
-    Time_MUSE01 = np.array(detDB.data)[:, 0]
-    dateTime_MUSE01 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE01])
+    Time_Det1 = np.array(detDB.data)[:, 0]
+    dateTime_Det1 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_Det1])
     detDB.getColumn(dataTable, 'Live_Time')
-    Live_Time_MUSE01 = np.array(detDB.data)[:, 0]
+    Live_Time_Det1 = np.array(detDB.data)[:, 0]
 
-    cps_MUSE01 = np.sum(spectra_MUSE01,axis=1)
-    dates_MUSE01 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE01])
-    total_spectra_MUSE01 = np.sum(spectra_MUSE01,axis=0)
+    cps_Det1 = np.sum(spectra_Det1,axis=1)
+    total_spectra_Det1 = np.sum(spectra_Det1,axis=0)
 
-    dataTable = 'MUSE12_data'
+    dataTable = 'Det3_BL_4in_data'
     detDB.getColumn(dataTable, 'Spectrum__IntArray')
-    spectra_MUSE12 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
+    spectra_Det3 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
     detDB.getColumn(dataTable, 'Time')
-    Time_MUSE12 = np.array(detDB.data)[:, 0]
-    dateTime_MUSE12 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE12])
+    Time_Det3 = np.array(detDB.data)[:, 0]
+    dateTime_Det3 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_Det3])
     detDB.getColumn(dataTable, 'Live_Time')
-    Live_Time_MUSE12 = np.array(detDB.data)[:, 0]
+    Live_Time_Det3 = np.array(detDB.data)[:, 0]
 
-    cps_MUSE12 = np.sum(spectra_MUSE12, axis=1)
-    dates_MUSE12 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE12])
-    total_spectra_MUSE12 = np.sum(spectra_MUSE12, axis=0)
+    cps_Det3 = np.sum(spectra_Det3, axis=1)
+    total_spectra_Det3 = np.sum(spectra_Det3, axis=0)
+
+    dataTable = 'Det5_FC_2in_data'
+    detDB.getColumn(dataTable, 'Spectrum__IntArray')
+    spectra_Det5 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
+    detDB.getColumn(dataTable, 'Time')
+    Time_Det5 = np.array(detDB.data)[:, 0]
+    detDB.getColumn(dataTable, 'Live_Time')
+    Live_Time_Det5 = np.array(detDB.data)[:, 0]
+
+    cps_Det5 = np.sum(spectra_Det5, axis=1)
+    total_spectra_Det5 = np.sum(spectra_Det5, axis=0)
 
     '''
     Energy Calibration Section
@@ -209,8 +232,9 @@ for dbFile in dbFiles:
 
     source_names = ['Th-232', 'Cs-137', 'Eu-152']
 
-    calibration_energies_pairs_MUSE01 = {}  # {energy_keV:channel,...}
-    calibration_energies_pairs_MUSE12 = {}
+    calibration_energies_pairs_Det1 = {}  # {energy_keV:channel,...}
+    calibration_energies_pairs_Det3 = {}
+    calibration_energies_pairs_Det5 = {}  # {energy_keV:channel,...}
     colors = ['g','r','k','y','m','c','orange','purple','grey','darkred','plum','tan']
     plotIt = True
     first = True
@@ -236,7 +260,7 @@ for dbFile in dbFiles:
             ax[1].legend()
             plt.show()
             '''
-            spec = total_spectra_MUSE01[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            spec = total_spectra_Det1[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             channel_spec = np.arange(1,2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             a = spec[-1]
             b = np.max(spec) - spec[0]
@@ -248,10 +272,10 @@ for dbFile in dbFiles:
             popt[4] = np.abs(popt[4])
             channel = (np.abs(channel_spec - channel_spec[np.argmax(peakFunc(channel_spec, *popt))])).argmin()+channel_spec[0]
             j = energy_conversion[str(j)]
-            if j not in calibration_energies_pairs_MUSE01.keys():
-                calibration_energies_pairs_MUSE01[j] = [channel]
+            if j not in calibration_energies_pairs_Det1.keys():
+                calibration_energies_pairs_Det1[j] = [channel]
             else:
-                calibration_energies_pairs_MUSE01[j].append(channel)
+                calibration_energies_pairs_Det1[j].append(channel)
 
 
             if plotIt:
@@ -267,12 +291,12 @@ for dbFile in dbFiles:
             count+=1
     if plotIt:
         plt.figure(1)
-        plt.plot(total_spectra_MUSE01, zorder=0)
+        plt.plot(total_spectra_Det1, zorder=0)
         plt.yscale('log')
         plt.legend()
         plt.title('MUSE01')
         plt.grid(True, which='both',alpha=0.5)
-        plt.savefig(savePath+'MUSE01_calibration.png',dpi=600)
+        #plt.savefig(savePath+'MUSE01_calibration.png',dpi=600)
         plotDiagnostics = False
 
     first = True
@@ -287,7 +311,7 @@ for dbFile in dbFiles:
             #indexs = np.where((energy > k) & (energy < l))
             indexs = np.where((np.arange(0,2048) > k) & (np.arange(0,2048) < l))
 
-            spec = total_spectra_MUSE12[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            spec = total_spectra_Det3[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             channel_spec = np.arange(1, 2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
             a = spec[-1]
             b = np.max(spec) - spec[0]
@@ -300,10 +324,10 @@ for dbFile in dbFiles:
             channel = (np.abs(np.arange(channel_spec[0],channel_spec[-1]) - channel_spec[
                 np.argmax(peakFunc(channel_spec, *popt))])).argmin()+channel_spec[0]
             j = energy_conversion[str(j)]
-            if j not in calibration_energies_pairs_MUSE12.keys():
-                calibration_energies_pairs_MUSE12[j] = [channel]
+            if j not in calibration_energies_pairs_Det3.keys():
+                calibration_energies_pairs_Det3[j] = [channel]
             else:
-                calibration_energies_pairs_MUSE12[j].append(channel)
+                calibration_energies_pairs_Det3[j].append(channel)
 
             if plotIt:
                 '''
@@ -318,13 +342,64 @@ for dbFile in dbFiles:
             count += 1
     if plotIt:
         plt.figure(2)
-        plt.plot(total_spectra_MUSE12, zorder=0)
+        plt.plot(total_spectra_Det3, zorder=0)
         plt.yscale('log')
         plt.legend()
-        plt.title('MUSE12')
+        plt.title('Det3')
         plt.grid(True, which='both',alpha=0.5)
-        plt.savefig(savePath+'MUSE12_calibration.png',dpi=600)
+        #plt.savefig(savePath+'MUSE12_calibration.png',dpi=600)
 
+    first = True
+    count = 0
+    for i in range(len(source_names)):
+        name = source_names[i]
+        peaks, peak_windows_lower, peak_windows_upper = getIsotopeEnergies_large(source_names[i])
+        print '\t Fitting isotope:\t%s' % (source_names[i])
+        for z in range(len(peaks)):
+
+            j, k, l = (peaks[z], peak_windows_lower[z], peak_windows_upper[z])
+            #indexs = np.where((energy > k) & (energy < l))
+            indexs = np.where((np.arange(0,2048) > k) & (np.arange(0,2048) < l))
+
+            spec = total_spectra_Det5[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            channel_spec = np.arange(1, 2049)[indexs[0][0]:indexs[0][len(indexs[0]) - 1]]
+            a = spec[-1]
+            b = np.max(spec) - spec[0]
+            c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
+            mu = channel_spec[np.argmax(spec)]
+            sigma = 1.5
+            p0 = [a, b, c, mu, sigma]
+            popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
+            popt[4] = np.abs(popt[4])
+            channel = (np.abs(np.arange(channel_spec[0],channel_spec[-1]) - channel_spec[
+                np.argmax(peakFunc(channel_spec, *popt))])).argmin()+channel_spec[0]
+            j = energy_conversion[str(j)]
+            if j not in calibration_energies_pairs_Det5.keys():
+                calibration_energies_pairs_Det5[j] = [channel]
+            else:
+                calibration_energies_pairs_Det5[j].append(channel)
+
+            if plotIt:
+                '''
+                Plots fitted data on top of spectra
+                '''
+
+                string = str(j) + ' ; ' + str(name)
+                if first:
+                    plt.figure(3)
+                    first = False
+                plt.plot(channel_spec, peakFunc(channel_spec, *popt), color=colors[count], linestyle='--', label=string, zorder=10)
+            count += 1
+    if plotIt:
+        plt.figure(3)
+        plt.plot(total_spectra_Det5, zorder=0)
+        plt.yscale('log')
+        plt.legend()
+        plt.title('Det3')
+        plt.grid(True, which='both',alpha=0.5)
+        #plt.savefig(savePath+'Det5_calibration.png',dpi=600)
+
+if False:
     '''
     Creating energy pairs
     '''
@@ -371,4 +446,4 @@ for dbFile in dbFiles:
     plt.savefig(savePath+'Calibration_Pairs_MUSE12.png',dpi=600)
 
 if (plotIt or plotDiagnostics):
-    plt.show(False)
+    plt.show(True)

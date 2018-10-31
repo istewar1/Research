@@ -156,8 +156,8 @@ def getIsotopeEnergies_large(isotope):
         peak_windows_upper.append(450)
     elif isotope == "Th-232":
         peaks.append(1725.0) # 2614
-        peak_windows_lower.append(1650)
-        peak_windows_upper.append(1830)
+        peak_windows_lower.append(1680)
+        peak_windows_upper.append(1880)
     elif isotope == "Eu-152":
         peaks.append(88)
         peak_windows_lower.append(74)
@@ -166,10 +166,10 @@ def getIsotopeEnergies_large(isotope):
         peak_windows_lower.append(210)
         peak_windows_upper.append(275)
         peaks.append(650) # 964.079
-        peak_windows_lower.append(615)
-        peak_windows_upper.append(698)
+        peak_windows_lower.append(612)
+        peak_windows_upper.append(705)
         peaks.append(760) # 1112.074
-        peak_windows_lower.append(699)
+        peak_windows_lower.append(702)
         peak_windows_upper.append(820)
         peaks.append(940) #1408
         peak_windows_lower.append(880)
@@ -184,7 +184,7 @@ inPath = '/Volumes/IAN USB/WIND/GADRAS dat Creation/'
 #energy = np.genfromtxt(inPath + 'Example_Energy_Pairs.json', delimiter=',')
 #energy = np.array(energy)
 dbFiles = [x for x in os.listdir(inPath) if '.sqlite3' in x]
-dbFiles = ['archerair2012-WIND_EnergyCal_Eu152_Cs137-2018-10-30T15.49.20.526.sqlite3']
+dbFiles = ['archerair2012-WIND_eCal_Eu152_Cs137_Th232-2018-10-30T17.13.57.808.sqlite3']
 
 savePath = inPath
 for dbFile in dbFiles:
@@ -294,9 +294,9 @@ for dbFile in dbFiles:
         plt.plot(total_spectra_Det1, zorder=0)
         plt.yscale('log')
         plt.legend()
-        plt.title('MUSE01')
+        plt.title('Det1')
         plt.grid(True, which='both',alpha=0.5)
-        #plt.savefig(savePath+'MUSE01_calibration.png',dpi=600)
+        #plt.savefig(savePath+'Det1_calibration.png',dpi=600)
         plotDiagnostics = False
 
     first = True
@@ -317,7 +317,7 @@ for dbFile in dbFiles:
             b = np.max(spec) - spec[0]
             c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
             mu = channel_spec[np.argmax(spec)]
-            sigma = 1.5
+            sigma = 5
             p0 = [a, b, c, mu, sigma]
             popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
             popt[4] = np.abs(popt[4])
@@ -347,7 +347,7 @@ for dbFile in dbFiles:
         plt.legend()
         plt.title('Det3')
         plt.grid(True, which='both',alpha=0.5)
-        #plt.savefig(savePath+'MUSE12_calibration.png',dpi=600)
+        #plt.savefig(savePath+'Det3_calibration.png',dpi=600)
 
     first = True
     count = 0
@@ -367,7 +367,7 @@ for dbFile in dbFiles:
             b = np.max(spec) - spec[0]
             c = -1.0 * np.abs(spec[0] - spec[-1]) / (channel_spec[-1] - channel_spec[0])
             mu = channel_spec[np.argmax(spec)]
-            sigma = 1.5
+            sigma = 5
             p0 = [a, b, c, mu, sigma]
             popt, pcov = curve_fit(peakFunc, channel_spec, spec, p0=p0)
             popt[4] = np.abs(popt[4])
@@ -395,7 +395,7 @@ for dbFile in dbFiles:
         plt.plot(total_spectra_Det5, zorder=0)
         plt.yscale('log')
         plt.legend()
-        plt.title('Det3')
+        plt.title('Det5')
         plt.grid(True, which='both',alpha=0.5)
         #plt.savefig(savePath+'Det5_calibration.png',dpi=600)
 
@@ -403,33 +403,40 @@ if False:
     '''
     Creating energy pairs
     '''
-    energy_MUSE01 = [];  energy_MUSE01.append(0.0)
-    channel_MUSE01 = []; channel_MUSE01.append(0)
-    energy_MUSE12 = [];  energy_MUSE12.append(0.0)
-    channel_MUSE12 = []; channel_MUSE12.append(0)
+    energy_Det1 = [0.0];  #energy_Det1.append(0.0)
+    channel_Det1 = [0]; #channel_Det1.append(0)
+    energy_Det3 = [0.0];  #energy_Det3.append(0.0)
+    channel_Det3 = [0]; #channel_Det3.append(0)
+    energy_Det5 = [0.0];  #energy_Det5.append(0.0)
+    channel_Det5 = [0]; #channel_Det5.append(0)
 
-    for i in calibration_energies_pairs_MUSE01:
-        energy_MUSE01.append(float(i))
-        channel_MUSE01.append(calibration_energies_pairs_MUSE01[i][0])
-    for i in calibration_energies_pairs_MUSE12:
-        energy_MUSE12.append(float(i))
-        channel_MUSE12.append(calibration_energies_pairs_MUSE12[i][0])
+    for i in calibration_energies_pairs_Det1:
+        energy_Det1.append(float(i))
+        channel_Det1.append(calibration_energies_pairs_Det1[i][0])
+    for i in calibration_energies_pairs_Det3:
+        energy_Det3.append(float(i))
+        channel_Det3.append(calibration_energies_pairs_Det3[i][0])
+    for i in calibration_energies_pairs_Det5:
+        energy_Det5.append(float(i))
+        channel_Det5.append(calibration_energies_pairs_Det5[i][0])
 
-    energy_MUSE01 = sorted(energy_MUSE01)
-    energy_MUSE12 = sorted(energy_MUSE12)
-    channel_MUSE01 = sorted(channel_MUSE01)
-    channel_MUSE12 = sorted(channel_MUSE12)
+    energy_Det1 = sorted(energy_Det1)
+    energy_Det3 = sorted(energy_Det3)
+    channel_Det1 = sorted(channel_Det1)
+    channel_Det3 = sorted(channel_Det3)
+    energy_Det5 = sorted(energy_Det5)
+    channel_Det5 = sorted(channel_Det5)
 
     # Manually creating Channels and energies for spline for specific MUSE node
-    channels = np.array(channel_MUSE12); channels = np.delete(channels,5)
-    energies = np.array(energy_MUSE12) ; energies = np.delete(energies,5)
-
+    channels = np.array(channel_Det5); channels = np.delete(channels,5)
+    energies = np.array(energy_Det5) ; energies = np.delete(energies,5)
+    print len(channels),len(energies)
     us = UnivariateSpline(channels[0:-1],energies[0:-1],k=2,s=0.0,ext=0)
     interp = us(np.arange(0,channels[-2]))
     ext = np.polyfit(np.array([channels[-2],channels[-1]]),np.array([energies[-2],energies[-1]]),1)
     extrap = np.polyval(ext, np.arange(channels[-2], 2048))
     cs = np.concatenate([interp,extrap])
-    np.save(savePath + 'eCal_MUSE12_updated.npy',cs)
+    np.save(savePath + 'eCal_Det5.npy',cs)
     x_range = np.arange(len(cs))
     fig,axes = plt.subplots(2,1)
     axes[0].plot(x_range, np.array(cs), label='Cubic Spline')
@@ -443,7 +450,7 @@ if False:
     axes[1].set_xlabel('Channel')
     axes[1].set_ylabel('Channel/Energy')
     fig.tight_layout()
-    plt.savefig(savePath+'Calibration_Pairs_MUSE12.png',dpi=600)
+    plt.savefig(savePath+'Calibration_Pairs_Det5.png',dpi=600)
 
 if (plotIt or plotDiagnostics):
-    plt.show(True)
+    plt.show(False)

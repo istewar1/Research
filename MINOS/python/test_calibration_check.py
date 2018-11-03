@@ -199,20 +199,7 @@ inPath = '/Volumes/IAN USB/MINOS/Energy Calibration/C23_10.18.2018/'
 energy = np.genfromtxt(inPath + 'Example_Energy_Pairs.json', delimiter=',')
 energy = np.array(energy)
 dbFiles = [x for x in os.listdir(inPath) if '.sqlite3' in x]
-dbFiles = ['archerair2012-Characterization_C23_Cs137_Eu152-2018-10-18T15.58.32.839.sqlite3']
-
-for dbFile in dbFiles:
-    print dbFile
-    detDB = database(inPath + dbFile)
-
-    dataTable = 'MUSE01_data'
-    detDB.getColumn(dataTable, 'Spectrum__IntArray')
-    spectra_MUSE01 = np.array([np.fromstring(x[0], sep=',', dtype='int') for x in detDB.data])
-    detDB.getColumn(dataTable, 'Time')
-    Time_MUSE01 = np.array(detDB.data)[:, 0]
-    dateTime_MUSE01 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE01])
-    detDB.getColumn(dataTable, 'Live_Time')
-    Live_Time_MUSE01 = np.array(detDB.data)[:, 0]
+`
 
     cps_MUSE01 = np.sum(spectra_MUSE01,axis=1)
     dates_MUSE01 = np.array([dt.datetime.fromtimestamp(ts) for ts in Time_MUSE01])

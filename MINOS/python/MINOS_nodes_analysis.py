@@ -13,15 +13,19 @@ from itertools import groupby
 from operator import itemgetter
 from scipy.optimize import curve_fit
 
-directory_path = '/Volumes/Ian External HD/Node Data/Alarm_Analysis/'
-csv_path = '/Volumes/Ian External HD/Node Data/Alarm_Analysis/'
+directory_path = '/Volumes/Ian External HD/Node Data/'
+csv_path = '/Volumes/Ian External HD/Node Data/'
 nodes = [x for x in os.listdir(directory_path) if 'MUSE' in x]
-outPath = directory_path+'test/figures/'
+outPath = directory_path+'figures/'
 
 # Y-min/Y-max for CPS plots
 counts_range = {'MUSE01':[1300,2100],'MUSE04':[1500,2900],\
     'MUSE06':[500,1800],'MUSE10':[1300,2400],\
     'MUSE11':[1500,2900],'MUSE12':[1300,2500]}
+
+nodes = ['MUSE11','MUSE12']
+#nodes = ['MUSE04','MUSE10']
+nodes = ['MUSE06']
 nodes = ['MUSE01']
 for i in nodes:
     Node_counts = {}
@@ -30,10 +34,9 @@ for i in nodes:
     Node_datetimes = {}
     Node_livetimes = {}
     print 'Reading %s'%i
-    inPath = directory_path+str(i)+'/hdf5Files/'
+    inPath = directory_path+str(i)+'/'#+'/hdf5Files/'
     dbFiles = [x for x in os.listdir(inPath) if '_ALG' not in x]
-    #dbFiles = [x for x in dbFiles if '2018-08-01' in x]
-    dbFiles = [x for x in dbFiles if (('08-04T' in x)or('08-05T' in x)or('08-06T' in x)or('08-07T' in x))]
+    dbFiles = [x for x in dbFiles if (('09-05T' in x)or('09-06T' in x)or('09-07T' in x)or('09-08T' in x)or('09-09T' in x) or ('09-10T' in x)or('09-11T' in x))]
     first_time_times = True; first_time_spectra = True; first_time_livetimes = True
 
     for dbFile in dbFiles:
@@ -75,74 +78,86 @@ for i in nodes:
     th232_peak = []
     th232_r2 = []
     calc_time = []
-    for i in Node_spectra:
-        step = 600
-        step0=0
+    if True:
+        for i in Node_spectra:
+            step = 600
+            step0=0
 
-        for k in range(step,len(Node_spectra[i]),step):
-            time = Node_times[i][k]
-            spec = list(Node_spectra[i][step0:k])
-            spectra = np.sum(spec,axis=0)
+            for k in range(step,len(Node_spectra[i]),step):
+                time = Node_times[i][k]
+                spec = list(Node_spectra[i][step0:k])
+                spectra = np.sum(spec,axis=0)
 
-            # Fitting K40
-            eMin = 420
-            eMax = 540
-            sigma = 3
-            indexs=np.arange(eMin,eMax)
-            xs=indexs
-            ys=spectra[indexs]
-            a=np.min(ys)
-            b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
-            c=(ys[-1]-ys[0])/(eMax-eMin)
-            mu=500
-            popt,pcov=curve_fit(MINOS_analysis.gausswLine,xs,ys,p0=[a,b,c,mu,sigma])
-            k40_peak.append(popt[3])
-            calc_time.append(time)
-            # Calculating R2 value for fit
-            calc_ys = MINOS_analysis.gausswLine(xs,*popt)
-            ss_res = np.sum((ys - calc_ys) ** 2)
-            ss_tot = np.sum((ys - np.mean(ys)) ** 2)
-            r2 = 1 - (ss_res / ss_tot)
-            k40_r2.append(r2)
+                # Fitting K40
+                eMin = 420
+                eMax = 540
+                sigma = 3
+                indexs=np.arange(eMin,eMax)
+                xs=indexs
+                ys=spectra[indexs]
+                a=np.min(ys)
+                b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
+                c=(ys[-1]-ys[0])/(eMax-eMin)
+                mu=500
+                popt,pcov=curve_fit(MINOS_analysis.gausswLine,xs,ys,p0=[a,b,c,mu,sigma])
+                k40_peak.append(popt[3])
+                calc_time.append(time)
+                # Calculating R2 value for fit
+                calc_ys = MINOS_analysis.gausswLine(xs,*popt)
+                ss_res = np.sum((ys - calc_ys) ** 2)
+                ss_tot = np.sum((ys - np.mean(ys)) ** 2)
+                r2 = 1 - (ss_res / ss_tot)
+                k40_r2.append(r2)
 
-            # Fitting Th-232
-            eMin = 800
-            eMax = 960
-            sigma = 4
-            indexs=np.arange(eMin,eMax)
-            xs_th=indexs
-            ys_th=spectra[indexs]
-            max = np.argmax(ys_th)
-            eMin = max+810-30
-            eMax = max+810+30
-            a=np.min(ys)
-            b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
-            c=(ys[-1]-ys[0])/(eMax-eMin)
-            mu=870
-            popt_th,pcov_th=curve_fit(MINOS_analysis.gausswLine,xs_th,ys_th,p0=[a,b,c,mu,sigma])
-            th232_peak.append(popt_th[3])
-            # Calculating R2 value for fit
-            calc_ys = MINOS_analysis.gausswLine(xs_th,*popt)
-            ss_res = np.sum((ys_th- calc_ys) ** 2)
-            ss_tot = np.sum((ys_th - np.mean(ys_th)) ** 2)
-            r2 = 1 - (ss_res / ss_tot)
-            th232_r2.append(r2)
+                # Fitting Th-232
+                eMin = 800
+                eMax = 960
+                sigma = 4
+                indexs=np.arange(eMin,eMax)
+                xs_th=indexs
+                ys_th=spectra[indexs]
+                max = np.argmax(ys_th)
+                eMin = max+810-30
+                eMax = max+810+30
+                a=np.min(ys)
+                b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
+                c=(ys[-1]-ys[0])/(eMax-eMin)
+                mu=870
+                popt_th,pcov_th=curve_fit(MINOS_analysis.gausswLine,xs_th,ys_th,p0=[a,b,c,mu,sigma])
+                th232_peak.append(popt_th[3])
+                # Calculating R2 value for fit
+                calc_ys = MINOS_analysis.gausswLine(xs_th,*popt)
+                ss_res = np.sum((ys_th- calc_ys) ** 2)
+                ss_tot = np.sum((ys_th - np.mean(ys_th)) ** 2)
+                r2 = 1 - (ss_res / ss_tot)
+                th232_r2.append(r2)
 
-            if False:
-                fig,ax = plt.subplots()
-                ax.plot(spectra)
-                ax.set_yscale('log')
-                ax.plot(xs,MINOS_analysis.gausswLine(xs,*popt),lw=2,marker='',ls='--',color='k',label=str(popt[3]))
-                ax.plot(xs_th,MINOS_analysis.gausswLine(xs_th,*popt_th),lw=2,marker='',ls='--',color='k',label=str(popt_th[3]))
-                plt.grid(True,which='both',alpha=0.5)
-                title_string = i+'-'+str(time)
-                plt.title(title_string)
-                plt.savefig(outPath+i+'-'+str(time)+'.png',format='png',dpi=200)
-                plt.close('all')
+                if False:
+                    fig,ax = plt.subplots()
+                    ax.plot(spectra)
+                    ax.set_yscale('log')
+                    ax.plot(xs,MINOS_analysis.gausswLine(xs,*popt),lw=2,marker='',ls='--',color='k',label=str(popt[3]))
+                    ax.plot(xs_th,MINOS_analysis.gausswLine(xs_th,*popt_th),lw=2,marker='',ls='--',color='k',label=str(popt_th[3]))
+                    plt.grid(True,which='both',alpha=0.5)
+                    title_string = i+'-'+str(time)
+                    plt.title(title_string)
+                    plt.savefig(outPath+i+'/'+i+'-'+str(time)+'.png',format='png',dpi=200)
+                    plt.close('all')
 
-            step0=k
+                step0=k
+            fig, axes = plt.subplots(nrows=2)
+            axes[0].plot(k40_peak, 'o', markersize=0.75, label='K40 Peak Channel');
+            axes[0].grid(alpha=0.5);
+            axes[0].set_ylabel('Channel')
+            axes[1].plot(th232_peak, 'ro', markersize=0.75, label='Th232 Peak Channel');
+            axes[1].grid(alpha=0.5);
+            axes[1].set_ylabel('Channel')
+            axes[0].legend(fancybox=True);
+            axes[1].legend(fancybox=True)
+            axes[0].set_title('Peak locations every 5-minutes')
+            plt.savefig(outPath+i+'/' + i + '_peak_tracking_09_05-11.png', format='png', dpi=200)
 
-    runAlarms = False
+    runAlarms = True
 
     if runAlarms:
         back_windows = 20
@@ -157,7 +172,7 @@ for i in nodes:
             sprt_indexs.append(map(itemgetter(1), g))
 
         if ( (len(ksigma_alarms)>0)or(len(sprt_alarms)>0) ):
-            fig,ax = plt.subplots(nrows=3)
+            fig,ax = plt.subplots(figsize=(8,8), nrows=3,sharex=True)
             ax[0].plot(Node_datetimes[i],roi_counts,c=node_colors(i),linewidth=0.75,label=str(i))
             ax[0].set_ylim(counts_range[i][0],counts_range[i][1])
             ax[0].set_title(str(i))
@@ -187,18 +202,16 @@ for i in nodes:
             ax[2].set_ylabel('SPRT')
             ax[2] = plt.gca()
             ax[2].xaxis.set_major_formatter(md.DateFormatter('%m/%d %H:%M'))
-            ax[1].set_xlabel('Time (month/day hour:minute)')
-            plt.subplots_adjust(hspace=0.1)
-        plt.savefig(outPath+i+'_test.pdf',format='pdf',dpi=600)
+            ax[2].set_xlabel('Time (month/day hour:minute)')
+            for ax in fig.axes:
+                matplotlib.pyplot.sca(ax)
+                plt.xticks(rotation=25)
+            plt.subplots_adjust(hspace=0.05)
+        plt.savefig(outPath+i+'/' + i +'_Alarms_09_05-11.png',format='png',dpi=200)
 
 #node_timeseries(Node_times,Node_counts,nodes)
 if False:
-    plt.savefig(outPath+'test.pdf',format='pdf',dpi=600)
+    plt.savefig(outPath+'test.pdf',format='pdf',dpi=200)
 if False:
     plt.show()
 
-fig,axes = plt.subplots(nrows=2)
-axes[0].plot(k40_peak,'o',markersize=0.75,label='K40 Peak Channel');axes[0].grid(alpha=0.5);axes[0].set_ylabel('Channel')
-axes[1].plot(th232_peak,'ro',markersize=0.75,label='Th232 Peak Channel');axes[1].grid(alpha=0.5);axes[1].set_ylabel('Channel')
-axes[0].legend(fancybox=True);axes[1].legend(fancybox=True)
-plt.savefig(outPath+'peak_location.png',format='png',dpi=200)

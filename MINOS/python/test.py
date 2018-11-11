@@ -20,11 +20,12 @@ def quadratic(x,a,b,c):
     return a + b * x + c * x * x
 
 inPath = '/Volumes/IAN USB/WIND/GADRAS dat Creation/energy_pairs/'
-e_file = 'eCal_Det1.npy'
+e_file = 'eCal_Det5.npy'
 
 energy_pairs = np.load(inPath+e_file)
-popt,popc = curve_fit(quadratic,energy_pairs,range(1,2049))
-values = quadratic(np.array(range(0,2048)),*popt)
+popt,popc = curve_fit(quadratic,range(0,len(energy_pairs)),energy_pairs)
+values = quadratic(np.array(range(1,2049)),*popt)
+print popt
 plt.figure();
 plt.plot(values,'r--')
 plt.plot(energy_pairs,'b')

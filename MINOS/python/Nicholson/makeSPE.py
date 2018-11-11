@@ -18,11 +18,14 @@ def writeSPE(path,label, liveTime, realTime, time, spectrum, eCal=[0.0, 0.0, 0.0
             contents = contents + '%d\r\n' % (spectrum[i])
     contents = contents + '$ENER_FIT:\r\n%.4f %.4f %.4f\r\n' % (eCal[0], eCal[1], eCal[2])
     contents = contents + '$MCA_CAL:\r\n%.4f %.4f %.4f\r\n' % (eCal[0], eCal[1], eCal[2])
-    contents = contents + '$ENDRECORD'
+    contents = contents + '$ENDRECORD:'
     f = open(path+label + '.SPE', 'w')
     f.write(contents)
     f.close()
     return
+
+def quadratic(x,a,b,c):
+    return a + b * x + c * x * x
 
 class database(object): #database class
 
@@ -99,6 +102,7 @@ dbFile = inPath+'archerair2012-WIND_Ba133-2018-10-30T16.30.27.689.sqlite3'
 detDB = database(dbFile)
 tables =['Det1_BR_4in_data','Det3_BL_4in_data','Det5_FC_2in_data']
 energy_pairs = ['eCal_Det1.npy','eCal_Det3.npy','eCal_Det5.npy']
+
 for i in range(len(tables)):
     dataTable = tables[i]
     energy = np.load(inPath+'/energy_pairs/'+energy_pairs[i])
@@ -112,34 +116,37 @@ for i in range(len(tables)):
     liveTimes = np.array([float(x[0]) for x in liveTimes])
 
     # Creating energy parameters from energy cal previously created
-    popt, popc = curve_fit(quadratic, energy, range(1, len(energy)+1))
-
-    # look at the total count rate to select time windows
-    fig = plt.figure()
-    ttimes = dates(times)
-    plt.step(ttimes, np.sum(spectra, axis=1) / liveTimes, lw=2)
-    plt.grid(True)
-    formatter = mdates.DateFormatter('%m/%d %H:%M')
-    plt.gcf().axes[0].xaxis.set_major_formatter(formatter)
-    fig.autofmt_xdate()
-    plt.show(False)
-
+    energy = np.load(inPath+'energy_pairs/'+energy_pairs[i])
+    popt, popc = curve_fit(quadratic, range(0, len(energy)), energy)
+    values = quadratic(np.arange(0,len(energy)), *popt)
 
     liveTime = np.sum(liveTimes)
     spectrum = np.sum(spectra, axis=0)
 
-    # make a plot
-    plt.figure()
-    plt.plot(range(len(spectrum)), spectrum / liveTime, lw=2)
-    plt.title(dataTable)
-    plt.grid(True)
-    plt.yscale('log')
+    fig,ax = plt.subplots()
+    ax.plot(values,spectrum,'r',label='quadratic fit');ax.grid(alpha=0.5)
+    ax.plot(energy, spectrum, 'b', label='quadratic fit');ax.set_yscale('log');ax.legend()
+    ax.set_title(dataTable)
+    ax.set_xlabel('Energy (keV)')
     plt.show(False)
 
     # save to SPE
-    label = dataTable+'_'+'Ba-133_test'
+    label = dataTable+'_'+'Ba133'
     realTime = times[-1] - times[0]
     timeStamp = dt.datetime.fromtimestamp(times[0])
-    writeSPE(inPath,label, liveTime, realTime, timeStamp, spectrum, eCal=popt)
+    writeSPE(inPath,label, liveTime, realTime, timeStamp, spectrum, eCal=[float(x) for x in popt])
 
+create_energy_parameters = False
+if create_energy_parameters:
+    inPath = '/Volumes/IAN USB/WIND/GADRAS dat Creation/energy_pairs/'
+    e_file = 'eCal_Det1.npy'
 
+    energy_pairs = np.load(inPath + e_file)
+    popt, popc = curve_fit(quadratic, energy_pairs, range(1, 2049))
+    values = quadratic(np.array(range(0, 2048)), *popt)
+    print popt
+    plt.figure();
+    plt.plot(values, 'r--')
+    plt.plot(energy_pairs, 'b')
+    plt.grid()
+    plt.show()

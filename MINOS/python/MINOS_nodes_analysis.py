@@ -2,7 +2,7 @@ import numpy as np
 import os
 import h5py
 import matplotlib
-matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import MINOS_analysis
 from MINOS_analysis import node_timeseries,ksigma_RIO_alg,linFunc,node_colors,fixed_threshold_alg,sprt_alg
@@ -23,20 +23,22 @@ counts_range = {'MUSE01':[1300,2100],'MUSE04':[1500,2900],\
     'MUSE06':[500,1800],'MUSE10':[1300,2400],\
     'MUSE11':[1500,2900],'MUSE12':[1300,2500]}
 
-nodes = ['MUSE11','MUSE12']
-#nodes = ['MUSE04','MUSE10']
-nodes = ['MUSE06']
-nodes = ['MUSE01']
+nodes = ['MUSE01','MUSE04','MUSE06','MUSE11','MUSE12']
+Node_counts = {}
+Node_times = {}
+Node_spectra = {}
+Node_datetimes = {}
+Node_livetimes = {}
 for i in nodes:
-    Node_counts = {}
-    Node_times = {}
-    Node_spectra = {}
-    Node_datetimes = {}
-    Node_livetimes = {}
     print 'Reading %s'%i
     inPath = directory_path+str(i)+'/'#+'/hdf5Files/'
     dbFiles = [x for x in os.listdir(inPath) if '_ALG' not in x]
-    dbFiles = [x for x in dbFiles if (('09-05T' in x)or('09-06T' in x)or('09-07T' in x)or('09-08T' in x)or('09-09T' in x) or ('09-10T' in x)or('09-11T' in x))]
+    #dbFiles = [x for x in dbFiles if (('09-26T' in x)or('09-27T' in x)or('09-28T' in x)or('09-29T' in x)or('09-30T' in x) or ('09-31T' in x)or('10-01T' in x))]
+    dbFiles = [x for x in dbFiles if (('08-08T' in x)or('08-09T' in x)or('08-10T' in x)or('08-11T' in x)or('08-12T' in x) or ('08-13T' in x)or('08-14T' in x))]
+    #dbFiles = [x for x in dbFiles if (('08-15T' in x)or('08-16T' in x)or('08-17T' in x)or('08-18T' in x)or('08-19T' in x) or ('08-20T' in x)or('08-21T' in x))]
+
+    save_string = '08_08-08_14'
+
     first_time_times = True; first_time_spectra = True; first_time_livetimes = True
 
     for dbFile in dbFiles:
@@ -78,7 +80,8 @@ for i in nodes:
     th232_peak = []
     th232_r2 = []
     calc_time = []
-    if True:
+    try:
+        print lkjsadflkj
         for i in Node_spectra:
             step = 600
             step0=0
@@ -155,9 +158,10 @@ for i in nodes:
             axes[0].legend(fancybox=True);
             axes[1].legend(fancybox=True)
             axes[0].set_title('Peak locations every 5-minutes')
-            plt.savefig(outPath+i+'/' + i + '_peak_tracking_09_05-11.png', format='png', dpi=200)
-
-    runAlarms = True
+            plt.savefig(outPath+i+'/' + i + '_peak_tracking_'+save_string+'.png', format='png', dpi=200)
+    except:
+        pass
+    runAlarms = False
 
     if runAlarms:
         back_windows = 20
@@ -207,8 +211,21 @@ for i in nodes:
                 matplotlib.pyplot.sca(ax)
                 plt.xticks(rotation=25)
             plt.subplots_adjust(hspace=0.05)
-        plt.savefig(outPath+i+'/' + i +'_Alarms_09_05-11.png',format='png',dpi=200)
-
+        plt.savefig(outPath+i+'/' + i +'_Alarms_'+save_string+'.png',format='png',dpi=200)
+fig,ax=plt.subplots(6,sharex=True)
+count=0
+for i in Node_counts:
+    print i
+    ax[count].plot(Node_datetimes[i],Node_counts[i],label=str(i),c=node_colors(i))
+    ax[count].set_xlim(Node_datetimes[i][0], Node_datetimes[i][-1])
+    ax[count].set_ylim(counts_range[i][0], counts_range[i][1])
+    ax[count].grid(alpha=0.5, linewidth=0.5)
+    ax[count].legend(loc='upper right',fancybox=False,shadow=True)
+    count+=1
+ax[5] = plt.gca()
+ax[5].xaxis.set_major_formatter(md.DateFormatter('%m/%d'))
+ax[5].set_xlabel('Date (month/day)')
+plt.show()
 #node_timeseries(Node_times,Node_counts,nodes)
 if False:
     plt.savefig(outPath+'test.pdf',format='pdf',dpi=200)

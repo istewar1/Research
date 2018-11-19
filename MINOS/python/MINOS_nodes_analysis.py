@@ -24,6 +24,7 @@ counts_range = {'MUSE01':[1300,2100],'MUSE04':[1500,2900],\
     'MUSE11':[1500,2900],'MUSE12':[1300,2500]}
 
 nodes = ['MUSE01','MUSE04','MUSE06','MUSE11','MUSE12']
+
 Node_counts = {}
 Node_times = {}
 Node_spectra = {}

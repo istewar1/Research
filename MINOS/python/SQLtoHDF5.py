@@ -4,8 +4,8 @@ import os
 import h5py
 from MINOS_analysis import database
 
-outPath = '/Volumes/Ian External HD/Node Data/sqlitefiles/MUSE04/'
-inPath = '/Volumes/Ian External HD/Node Data/sqlitefiles/MUSE04/'
+outPath = '/Volumes/Ian External HD/Node Data/sqlitefiles/MUSE12/'
+inPath = '/Volumes/Ian External HD/Node Data/sqlitefiles/MUSE12/'
 
 # list all database files
 dbFiles = os.listdir(inPath)

@@ -423,7 +423,7 @@ dates=np.vectorize(dt.datetime.fromtimestamp)
 energies=np.linspace(0,3000,1024)
 
 plotIt=False
-node = 'MUSE06'
+node = 'MUSE12'
 inPath='/Volumes/Ian External HD/Node Data/sqlitefiles/'+node+'/'
 eCal_path = '/Volumes/Ian External HD/Node Data/energy_pairs/'+node+'/'
 hdf5outPath=inPath
@@ -560,6 +560,7 @@ for dbFile in dbFiles:
                         print '%.2f\t%.2f\t%.2f\t%.2f\t%.2f' % (np.sqrt(pcov[0][0]),np.sqrt(pcov[1][1]),np.sqrt(pcov[2][2]),np.sqrt(pcov[3][3]),np.sqrt(pcov[4][4]))
                         print
                 except:
+                    print i
                     popt=peakLocs[-1][1]
                     print '\t peak fit failed'
                 peakLocs.append([times[i],popt[3],np.sqrt(pcov[3][3])])

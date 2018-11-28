@@ -423,7 +423,7 @@ dates=np.vectorize(dt.datetime.fromtimestamp)
 energies=np.linspace(0,3000,1024)
 
 plotIt=False
-node = 'MUSE12'
+node = 'MUSE10'
 inPath='/Volumes/Ian External HD/Node Data/sqlitefiles/'+node+'/'
 eCal_path = '/Volumes/Ian External HD/Node Data/energy_pairs/'+node+'/'
 hdf5outPath=inPath
@@ -484,7 +484,7 @@ for dbFile in dbFiles:
     try:
         print 'Reading',dbFile
         outFile=dbFile.replace('.sqlite3','.hdf5')
-        outFile='MUSE01-'+'-'.join(outFile.split('-')[1:])
+        outFile=node+'-'+'-'.join(outFile.split('-')[1:])
         hdf5write=False
     except:
         continue
@@ -523,6 +523,11 @@ for dbFile in dbFiles:
         rebinedSpectra=[]
         peakLocs=[]
         alarm=False
+        plt.figure()
+        summed = np.sum(spectra[800:950],axis=0)
+        plt.plot(summed);plt.grid(alpha=0.5)
+        plt.yscale('log')
+        plt.show(False); plt.close('all')
         for i in range(len(spectra)):
             liveTime=liveTimes[i]
             spectrum=spectra[i]
@@ -542,11 +547,11 @@ for dbFile in dbFiles:
             if np.around(np.sum(windowLiveTime) > windowSize):
                 ### recalibrate
                 spec=np.sum(windowSpec,axis=0)/np.sum(windowLiveTime)
-                chanMin=418
-                chanMax=510
+                chanMin=425
+                chanMax=545
                 xs=np.arange(chanMin,chanMax)
                 ys=spec[chanMin:chanMax]
-                sigma=20.0
+                sigma=30.0
                 a=np.min(ys)
                 b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
                 c=(ys[-1]-ys[0])/(chanMax-chanMin)

@@ -1,3 +1,10 @@
+'''
+Manually creating signal window for source moving through detector nodes
+on Sept 28 2018
+
+@ian_stewarts
+'''
+
 Node_spectra = {}
 Node_counts = {}
 import numpy as np

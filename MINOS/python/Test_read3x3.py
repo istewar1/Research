@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 from sklearn.decomposition import PCA
 
-node = 'MUSE04'
+node = 'MUSE10'
 inPath = '/Volumes/Ian External HD/Node Data/sqlitefiles/'+node+'/'
 
 # list all database files

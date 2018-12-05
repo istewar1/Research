@@ -13,17 +13,17 @@ from itertools import groupby
 from operator import itemgetter
 from scipy.optimize import curve_fit
 
-directory_path = '/Volumes/Ian External HD/Node Data/'
-csv_path = '/Volumes/Ian External HD/Node Data/'
+directory_path = '/Volumes/Ian External HD/Node Data/Alarm_Analysis/'
+csv_path = directory_path
 nodes = [x for x in os.listdir(directory_path) if 'MUSE' in x]
-outPath = directory_path+'figures/'
+outPath = directory_path+'Figures/'
 
 # Y-min/Y-max for CPS plots
-counts_range = {'MUSE01':[1300,2100],'MUSE04':[1500,2900],\
-    'MUSE06':[500,1800],'MUSE10':[1300,2400],\
-    'MUSE11':[1500,2900],'MUSE12':[1300,2500]}
+counts_range = {'MUSE01':[1100,2100],'MUSE04':[1200,2900],\
+    'MUSE06':[500,1800],'MUSE10':[1100,2400],\
+    'MUSE11':[1500,2900],'MUSE12':[1100,2500]}
 
-nodes = ['MUSE01','MUSE04','MUSE06','MUSE11','MUSE12']
+nodes = ['MUSE01','MUSE04','MUSE06','MUSE10','MUSE11','MUSE12']
 
 Node_counts = {}
 Node_times = {}
@@ -32,13 +32,13 @@ Node_datetimes = {}
 Node_livetimes = {}
 for i in nodes:
     print 'Reading %s'%i
-    inPath = directory_path+str(i)+'/'#+'/hdf5Files/'
+    inPath = directory_path+str(i)+'/'+'/hdf5Files/'
     dbFiles = [x for x in os.listdir(inPath) if '_ALG' not in x]
     #dbFiles = [x for x in dbFiles if (('09-26T' in x)or('09-27T' in x)or('09-28T' in x)or('09-29T' in x)or('09-30T' in x) or ('09-31T' in x)or('10-01T' in x))]
-    dbFiles = [x for x in dbFiles if (('08-08T' in x)or('08-09T' in x)or('08-10T' in x)or('08-11T' in x)or('08-12T' in x) or ('08-13T' in x)or('08-14T' in x))]
-    #dbFiles = [x for x in dbFiles if (('08-15T' in x)or('08-16T' in x)or('08-17T' in x)or('08-18T' in x)or('08-19T' in x) or ('08-20T' in x)or('08-21T' in x))]
+    #dbFiles = [x for x in dbFiles if (('2018-10-01T' in x)or('2018-10-02T' in x)or('2018-10-03T' in x)or('2018-10-04T' in x)or('2018-10-05T' in x)or('2018-10-06T' in x)or('2018-10-07T' in x))]
+    dbFiles = [x for x in dbFiles if ('2018-10-31T' in x)]
 
-    save_string = '08_08-08_14'
+    save_string = '10_31'
 
     first_time_times = True; first_time_spectra = True; first_time_livetimes = True
 
@@ -213,9 +213,9 @@ for i in nodes:
                 plt.xticks(rotation=25)
             plt.subplots_adjust(hspace=0.05)
         plt.savefig(outPath+i+'/' + i +'_Alarms_'+save_string+'.png',format='png',dpi=200)
-fig,ax=plt.subplots(6,sharex=True)
+fig,ax=plt.subplots(6,sharex=True,figsize=(8,7))
 count=0
-for i in Node_counts:
+for i in nodes:
     print i
     ax[count].plot(Node_datetimes[i],Node_counts[i],label=str(i),c=node_colors(i))
     ax[count].set_xlim(Node_datetimes[i][0], Node_datetimes[i][-1])
@@ -224,12 +224,14 @@ for i in Node_counts:
     ax[count].legend(loc='upper right',fancybox=False,shadow=True)
     count+=1
 ax[5] = plt.gca()
-ax[5].xaxis.set_major_formatter(md.DateFormatter('%m/%d'))
-ax[5].set_xlabel('Date (month/day)')
-plt.show()
+ax[5].xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
+ax[5].set_xlabel('Date (Hour:Minute:Second)')
+for ax in fig.axes:
+    matplotlib.pyplot.sca(ax)
+    plt.xticks(rotation=25)
 #node_timeseries(Node_times,Node_counts,nodes)
-if False:
-    plt.savefig(outPath+'test.pdf',format='pdf',dpi=200)
+if True:
+    plt.savefig(outPath+'CPS_'+save_string+'.png',format='png',dpi=200)
 if False:
     plt.show()
 

@@ -70,16 +70,16 @@ URL: ftp://ai.iit.nrc.ca/pub/ksl-papers/NRC-35058.ps.Z
 	Bill		1
 	David		2
 	Mark		3
-	Jo		4
+	Jo			4
 	Kate		5
 	Penny		6
 	Rose		7
 	Mike		8
 	Nick		9
 	Rich		10
-	Tim		11
+	Tim			11
 	Sarah		12
-	Sue		13
+	Sue			13
 	Wendy		14
 
 
@@ -122,15 +122,15 @@ URL: ftp://ai.iit.nrc.ca/pub/ksl-papers/NRC-35058.ps.Z
 	Bill		1		0		0
 	David		2		0		0
 	Mark		3		0		0
-	Jo		4		1		0
+	Jo			4		1		0
 	Kate		5		1		0
 	Penny		6		1		0
 	Rose		7		1		0
 	Mike		8		0		1
 	Nick		9		0		1
 	Rich		10		0		1
-	Tim		11		0		1
+	Tim			11		0		1
 	Sarah		12		1		1
-	Sue		13		1		1
+	Sue			13		1		1
 	Wendy		14		1		1
 

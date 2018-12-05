@@ -80,6 +80,7 @@ for i in nodes:
                     first_time_livetimes = False
 
         Node_datetimes[i] = np.array([dt.datetime.fromtimestamp(x) for x in Node_times[i]])
+    print len(Node_counts[i])
     plt.figure();plt.plot(Node_counts[i]);plt.show()
     count=0
     for j in range(1200,86370,1200):

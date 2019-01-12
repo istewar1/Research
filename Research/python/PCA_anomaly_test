@@ -1,0 +1,310 @@
+def rebin_Archer(x1, y1, x2):
+    """
+    Rebin histogram values y1 from old bin edges x1 to new edges x2.
+
+    Input
+    -----
+     * x1 : m+1 array of old bin edges.
+     * y1 : m array of old histogram values. This is the total number in
+              each bin, not an average.
+     * x2 : n+1 array of new bin edges.
+
+    Returns
+    -------
+     * y2 : n array of rebinned histogram values.
+
+    The rebinning algorithm assumes that the counts in each old bin are
+    uniformly distributed in that bin.
+
+    Bins in x2 that are entirely outside the range of x1 are assigned 0.
+    """
+
+    x1 = np.asarray(x1)
+    y1 = np.asarray(y1)
+    x2 = np.asarray(x2)
+    # allocating y2 vector
+    m = y1.size
+    n = x2.size - 1
+    y2 = np.zeros(n, dtype=y1.dtype)
+    i_place = np.searchsorted(x2, x1)
+    # find out where x2 intersects with x1, this will determine which x2 bins
+    # we need to consider
+    start_pos = 0
+    end_pos = n
+    start_pos_test = np.where(i_place == 0)[0]
+    if start_pos_test.size > 0:
+        start_pos = start_pos_test[-1]
+    end_pos_test = np.where(i_place == x1.size)[0]
+    if end_pos_test.size > 0:
+        end_pos = end_pos_test[0]
+    # the first bin totally covers x1 range
+    if (start_pos == end_pos - 1
+            and i_place[start_pos] == 0
+            and i_place[start_pos + 1] == x1.size):
+        y2[start_pos] = y1[start_pos]
+        return y2
+    # print len(x1),len(y1),len(y2)
+    # print len(i_place)
+    # print i_place[980:len(i_place)]
+    # first(0th) X1 bin
+    ibin = 0
+    i_place_lower = i_place[ibin]
+    i_place_upper = i_place[ibin + 1]
+    if i_place_lower == 0 and i_place_upper > 0:
+        if i_place_upper == 1:
+            y2_index = i_place_upper - 1
+            y2[y2_index] += y1[ibin]
+            # print 'First bin %d counts go to y2 bin-%d' % (y1[ibin],y2_index)
+            # print y2
+        if i_place_upper == 2:
+            print 'first bin 2 overlaps'
+    # redistributing X1 bins with [1,m-1] indeces
+    for ibin in range(1, m - 1):
+        if y1[ibin] == 0:
+            continue
+        i_place_lower = i_place[ibin]
+        i_place_upper = i_place[ibin + 1]
+        x1min = x1[ibin]
+        x1max = x1[ibin + 1]
+        # Stop at the end
+        if i_place_lower >= n - 2:
+            return y2
+        # X1 bin fully inside X2 bin:
+        if i_place_lower == i_place_upper:
+            y2_index = i_place_upper - 1
+            # print 'y2_index %d -- i_place_lower=%d -- ibin=%d' % (y2_index,i_place_lower, ibin)
+            y2[y2_index] += y1[ibin]
+            # print '%d-th bin %d counts go to y2 bin-%d: X1 overlaps with X2' % (ibin,y1[ibin],y2_index)
+            # print y2
+        # X1 bin overlaps w/ two X2 bins:
+        if i_place_lower == i_place_upper - 1:
+            # X2 value that "splits" the X1 bin
+            x2_ov1 = x2[i_place_lower]
+            # Roll the dice y1[ibin]-times
+            for irand in range(0, int(y1[ibin])):
+                probValue = np.random.uniform(x1min, x1max)
+                # print 'rand-%d probV=%f x2_ov1=%f' %(irand,probValue,x2_ov1)
+                if probValue < x2_ov1:
+                    # send photon to lower bin :))
+                    y2_index = i_place_upper - 2
+                    y2[y2_index] += 1
+                else:
+                    y2_index = i_place_upper - 1
+                    y2[y2_index] += 1
+            # print '%d-th bin %d counts go to y2 bin-%d: X1 is completely in X2' % (ibin,y1[ibin],y2_index)
+            # print y2
+        # X1 bin overplaps w/ three X2 bins
+        if i_place_lower == i_place_upper - 2:
+            print '2 overlap bins'
+    return y2
+#
+import pandas as pd
+from numba import jit
+import numpy as np
+import h5py
+from scipy.interpolate import UnivariateSpline
+from scipy.spatial import distance
+from scipy.linalg import svd
+import matplotlib.pyplot as plt
+import time
+##
+filename = '/Volumes/Ian External HD/RSL NOVArray/data/Aug1-Aug8_2018/Full Sensor Reports.2018-08-01 04_00_00+0000 - 2018-08-08 04_00_00+0000.4 rsl Sensors (4).hdf5'
+hdf5 = h5py.File(filename, 'r')
+spectra = np.array(hdf5['digiBASE-RH 17178701/RadiationReading/spectrum/'])[32500:50000]
+spectra = np.add.reduceat(spectra, np.arange(0, len(spectra), 10),axis=0)
+spectra = np.array([np.add.reduceat(x, np.arange(0,1020, 10))[0:100] for x in spectra])
+print len(spectra),len(spectra[0])
+CPS = np.sum(spectra,axis=1)
+spectra = np.array([np.array(x)/float(max(x)) for x in spectra]) # Pseudo-normalization
+##
+from sklearn.decomposition import TruncatedSVD
+svd = TruncatedSVD(n_components=99)#343
+SVD = svd.fit(spectra)
+U = SVD.fit_transform(spectra)
+Sigma = SVD.explained_variance_ratio_
+VT = SVD.components_
+var_ex = [];
+first = True
+for i in range(len(Sigma)):
+    j = Sigma[i]
+    if first:
+        var_ex.append(j)
+        first = False
+    else:
+        var_ex.append(var_ex[i - 1] + j)
+#
+makeSCREE = False
+if makeSCREE:
+    fig, ax1 = plt.subplots()
+    ax1.bar(np.arange(1, len(Sigma) + 1), Sigma, label='Explained Variance')
+    ax1.set_xlabel('Component No.')
+    ax1.set_ylabel('Explained Variance')
+    ax1.set_yscale('log')
+    ax1.yaxis.label.set_color('blue')
+    ax1.tick_params(axis='y', colors='blue')
+    ax2 = ax1.twinx()
+    ax2.plot(var_ex, 'r--', label='Cumulative Variance')
+    ax2.set_ylabel('Cumulative Variance')
+    ax2.yaxis.label.set_color('red')
+    ax2.tick_params(axis='y', colors='red')
+    # customizing legend box
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc='center right', fancybox=False, shadow=True)
+    ax1.grid(alpha=0.5)
+    ax1.set_axisbelow(True)
+    plt.show()
+##
+#
+# Smoothing data using cubic spline and MBC
+#
+x = np.arange(0, len(spectra[0]))
+smooth1 = np.array([UnivariateSpline(x, y)(x) for y in spectra])
+ratios = np.array(spectra) / smooth1
+np.nan_to_num(0.0)
+ratios = np.nan_to_num(ratios)
+smooth_ratios = np.array([UnivariateSpline(x, y)(x) for y in ratios])
+smooth2 = smooth_ratios * smooth1
+for i in range(len(smooth2)):
+    smooth2[smooth2<0]=0.0
+print 'smoothed'
+#
+plotSmooth = False
+if plotSmooth:
+    fig, ax = plt.subplots(5, 1, sharex=True)
+    for i in range(5):
+        ax[i].plot(spectra[i], label='MUSE%i' % i)
+        ax[i].plot(smooth2[i], label='Smooth2-%i' % i)
+        ax[i].plot(smooth1[i], label='Smooth1-%i' % i)
+        ax[i].set_yscale('linear')
+        ax[i].legend()
+        ax[i].grid(alpha=0.5);
+        ax[i].set_axisbelow(True)
+    plt.show()
+#
+background = smooth2[0:100]
+spectra_background = spectra[0:100]
+# Performing SVD
+from scipy.linalg import svd
+U, s, VT = svd(spectra_background)
+Sigma = np.zeros((background.shape[0], background.shape[1]))
+Sigma[:background.shape[1], :background.shape[1]] = np.diag(s)
+Y = U.dot(Sigma.dot(VT)) # original data into PC space
+var_ex = [];
+first = True
+for i in range(len(s)):
+    j = s[i]
+    if first:
+        var_ex.append(j)
+        first = False
+    else:
+        var_ex.append(var_ex[i - 1] + j)
+#
+'''
+from sklearn.decomposition import TruncatedSVD
+SVD = TruncatedSVD(n_components=len(spectra[0])-1)
+U = SVD.fit_transform(spectra)
+s = SVD.explained_variance_ratio_
+'''
+#
+makeSCREE = False
+if makeSCREE:
+    fig, ax1 = plt.subplots()
+    ax1.bar(np.arange(1, len(s) + 1), s, label='Explained Variance')
+    ax1.set_xlabel('Component No.')
+    ax1.set_ylabel('Explained Variance')
+    ax1.set_yscale('linear')
+    ax1.yaxis.label.set_color('blue')
+    ax1.tick_params(axis='y', colors='blue')
+    ax1.set_ylim(0,8)
+    ax2 = ax1.twinx()
+    ax2.plot(var_ex, 'r--', label='Cumulative Variance')
+    ax2.set_ylabel('Cumulative Variance')
+    ax2.yaxis.label.set_color('red')
+    ax2.tick_params(axis='y', colors='red')
+    # customizing legend box
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc='center right', fancybox=False, shadow=True)
+    ax1.grid(alpha=0.5)
+    ax1.set_axisbelow(True)
+    #
+    plt.show()
+print 'svd comp'
+#
+# Calc distance
+#
+count = 0;
+D_regular = [];
+D_smooth = [];
+value = 100
+mean_bkgrd = np.mean(spectra_background, axis=0)
+cov_bkgrd = np.linalg.inv(np.cov(spectra_background))
+mean_Y = np.mean(background, axis=0)
+#plt.figure();plt.plot(mean_bkgrd,'b');plt.plot(mean_Y,'g');plt.yscale('log');plt.show()
+cov_Y = np.linalg.inv(np.cov(background))
+for i in range(len(background)+1,len(spectra)):
+    # Mahalanobis Distance - MUSE01
+    #D_regular.append(distance.mahalanobis(spectra[i], mean_bkgrd, cov_bkgrd))
+    diff = spectra[i] - mean_bkgrd
+    value = diff.T.dot(cov_bkgrd.dot(diff))
+    D_regular.append(value)
+    # Mahalanobis Distance - Smoother
+    #D_smooth.append(distance.mahalanobis(smooth2[i], mean_Y, cov_Y))
+    diff = smooth2[i] - mean_Y
+    value = diff.T.dot(cov_Y.dot(diff))
+    D_smooth.append(value)
+zeros = np.zeros(len(background))
+D_regular = np.concatenate((zeros, np.array(D_regular)))
+D_smooth = np.concatenate((zeros, np.array(D_smooth)))
+smooth_alarms = []; count=0
+for i in D_smooth:
+    if i <= -0.7E15:
+        print i
+        smooth_alarms.append(count)
+    count+=1
+fig,ax = plt.subplots(1,1)
+ax.plot(smooth_alarms,label='smooth');ax.legend()
+#
+fig, ax1 = plt.subplots(2,1,sharex=True)
+ax1[0].plot(D_regular, 'bo', label='Mahalnobis - REGULAR', zorder=10, alpha=0.25)
+ax1[0].set_xlabel('Entry Value')
+ax1[0].set_ylabel('Mahalnobis Distance')
+ax1[0].legend(fancybox=False, shadow=True)
+ax1[0].set_yscale('linear')
+ax1[0].yaxis.label.set_color('blue')
+ax1[0].tick_params(axis='y', colors='blue')
+ax2 = ax1[0].twinx()
+ax2.plot(CPS, 'r', label='CPS',zorder=1)
+ax2.set_ylabel('10sec CR')
+ax2.yaxis.label.set_color('red')
+ax2.tick_params(axis='y', colors='red')
+# -------------- #
+ax1[1].plot(D_smooth, 'bo', label='Mahalnobis - Smooth', zorder=10, alpha=0.25)
+ax1[1].set_xlabel('Entry Value')
+ax1[1].set_ylabel('Mahalnobis Distance')
+ax1[1].legend(fancybox=False, shadow=True)
+ax1[1].set_yscale('linear')
+ax1[1].yaxis.label.set_color('blue')
+ax1[1].tick_params(axis='y', colors='blue')
+for xc in smooth_alarms:
+    ax1[1].axvline(x=xc)
+ax2 = ax1[1].twinx()
+ax2.plot(CPS, 'r', label='CPS',zorder=1)
+ax2.set_ylabel('10sec CR')
+ax2.yaxis.label.set_color('red')
+ax2.tick_params(axis='y', colors='red')
+plt.show()
+#plt.savefig('/Users/i6o/Desktop/mahalanobis_distance_test.png',png=400)
+'''
+value = 10
+for i in range(value,len(smooth2),value):
+    matrix = smooth2[i-value:i]
+    ratio = np.array( matrix.dot(smooth2[i-value:i].T) ) / float(len(smooth2[i]))
+    m = np.sum(matrix,axis=0)
+    test = m.dot(m.T)
+    Sigma = ratio - 0.99*np.array( m.dot(m.T))
+    A = np.diag(1/np.sqrt(np.diag(Sigma)+1))
+    A_inv = np.diag(np.sqrt(np.diag(Sigma)+1))
+    C = A.dot(Sigma.dot(A))
+'''

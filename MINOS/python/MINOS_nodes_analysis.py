@@ -9,11 +9,12 @@ from MINOS_analysis import node_timeseries,ksigma_RIO_alg,linFunc,node_colors,fi
 import matplotlib.dates as md
 import datetime as dt
 import time
+import pandas as pd
 from itertools import groupby
 from operator import itemgetter
 from scipy.optimize import curve_fit
 
-directory_path = '/Volumes/Ian External HD/Node Data/Alarm_Analysis/'
+directory_path = '/Volumes/Ian External HD/hdf5Files_12112018/'
 csv_path = directory_path
 nodes = [x for x in os.listdir(directory_path) if 'MUSE' in x]
 outPath = directory_path+'Figures/'
@@ -24,28 +25,30 @@ counts_range = {'MUSE01':[1100,2100],'MUSE04':[1200,2900],\
     'MUSE11':[1500,2900],'MUSE12':[1100,2500]}
 
 nodes = ['MUSE01','MUSE04','MUSE06','MUSE10','MUSE11','MUSE12']
-
-Node_counts = {}
-Node_times = {}
-Node_spectra = {}
-Node_datetimes = {}
-Node_livetimes = {}
+nodes = ['MUSE11','MUSE12']
 for i in nodes:
-    print 'Reading %s'%i
-    inPath = directory_path+str(i)+'/'+'/hdf5Files/'
-    dbFiles = [x for x in os.listdir(inPath) if '_ALG' not in x]
-    #dbFiles = [x for x in dbFiles if (('09-26T' in x)or('09-27T' in x)or('09-28T' in x)or('09-29T' in x)or('09-30T' in x) or ('09-31T' in x)or('10-01T' in x))]
-    #dbFiles = [x for x in dbFiles if (('2018-10-01T' in x)or('2018-10-02T' in x)or('2018-10-03T' in x)or('2018-10-04T' in x)or('2018-10-05T' in x)or('2018-10-06T' in x)or('2018-10-07T' in x))]
-    dbFiles = [x for x in dbFiles if ('2018-10-31T' in x)]
 
-    save_string = '10_31'
+    Node_counts = {}
+    Node_times = {}
+    Node_spectra = {}
+    Node_datetimes = {}
+    Node_livetimes = {}
+
+    print 'Reading %s'%i
+
+    inPath = directory_path+str(i)+'/hdf5Files/'
+    print inPath
+
+    dbFiles = [x for x in os.listdir(inPath) if '_ALG' not in x]
+    dbFiles = [x for x in dbFiles if ('2018-11-2' in x)]
+    save_string = '11-20_29'
 
     first_time_times = True; first_time_spectra = True; first_time_livetimes = True
 
     for dbFile in dbFiles:
 
         hdf5 = h5py.File(inPath+dbFile,'r')
-        print dbFile
+        print '\t- '+dbFile
         for j in hdf5.keys():
 
             if '2x4x16Spectra' in j:
@@ -65,15 +68,13 @@ for i in nodes:
                 else:
                     Node_times[i] = np.array(hdf5.get(str(j)))
                     first_time_times = False
-
             if '2x4x16LiveTimes' in j:
                 if not first_time_livetimes:
                     Node_livetimes[i] = np.concatenate([Node_livetimes[i],np.array(hdf5.get(str(j)))])
                 else:
                     Node_livetimes[i] = np.array(hdf5.get(str(j)))
                     first_time_livetimes = False
-
-        Node_datetimes[i] = np.array([dt.datetime.fromtimestamp(x) for x in Node_times[i]])
+        #Node_datetimes[i] = np.array([dt.datetime.fromtimestamp(x) for x in Node_times[i]])
 
     plotIt = False
     k40_peak = []
@@ -81,10 +82,9 @@ for i in nodes:
     th232_peak = []
     th232_r2 = []
     calc_time = []
-    try:
-        print lkjsadflkj
+    if False:
         for i in Node_spectra:
-            step = 600
+            step = 1200
             step0=0
 
             for k in range(step,len(Node_spectra[i]),step):
@@ -93,9 +93,13 @@ for i in nodes:
                 spectra = np.sum(spec,axis=0)
 
                 # Fitting K40
-                eMin = 420
-                eMax = 540
-                sigma = 3
+                if i == 'MUSE06': # MUSE06 has Co-60 peaks; thus, requires unique window.
+                    eMin = 465
+                    eMax = 520
+                else: # MUSE04 may require unique window due to Co-60
+                    eMin = 420
+                    eMax = 540
+                sigma = 10
                 indexs=np.arange(eMin,eMax)
                 xs=indexs
                 ys=spectra[indexs]
@@ -103,7 +107,7 @@ for i in nodes:
                 b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
                 c=(ys[-1]-ys[0])/(eMax-eMin)
                 mu=500
-                popt,pcov=curve_fit(MINOS_analysis.gausswLine,xs,ys,p0=[a,b,c,mu,sigma])
+                popt,pcov=curve_fit(MINOS_analysis.gausswLine,xs,ys,p0=[a,b,c,mu,sigma],bounds=([-0.3,0.0,-8.0,eMin,3],[1E9,1E9,1.0,eMax,50]))
                 k40_peak.append(popt[3])
                 calc_time.append(time)
                 # Calculating R2 value for fit
@@ -116,21 +120,19 @@ for i in nodes:
                 # Fitting Th-232
                 eMin = 800
                 eMax = 960
-                sigma = 4
+                sigma = 8
                 indexs=np.arange(eMin,eMax)
                 xs_th=indexs
                 ys_th=spectra[indexs]
                 max = np.argmax(ys_th)
-                eMin = max+810-30
-                eMax = max+810+30
                 a=np.min(ys)
                 b=np.max(ys)/(sigma*np.sqrt(2.0*np.pi))
                 c=(ys[-1]-ys[0])/(eMax-eMin)
                 mu=870
-                popt_th,pcov_th=curve_fit(MINOS_analysis.gausswLine,xs_th,ys_th,p0=[a,b,c,mu,sigma])
+                popt_th,pcov_th=curve_fit(MINOS_analysis.gausswLine,xs_th,ys_th,p0=[a,b,c,mu,sigma],bounds=([-0.3,0.0,-5.0,eMin,3],[1E9,1E9,1.0,eMax,50]))
                 th232_peak.append(popt_th[3])
                 # Calculating R2 value for fit
-                calc_ys = MINOS_analysis.gausswLine(xs_th,*popt)
+                calc_ys = MINOS_analysis.gausswLine(xs_th,*popt_th)
                 ss_res = np.sum((ys_th- calc_ys) ** 2)
                 ss_tot = np.sum((ys_th - np.mean(ys_th)) ** 2)
                 r2 = 1 - (ss_res / ss_tot)
@@ -149,33 +151,42 @@ for i in nodes:
                     plt.close('all')
 
                 step0=k
-            fig, axes = plt.subplots(nrows=2)
-            axes[0].plot(k40_peak, 'o', markersize=0.75, label='K40 Peak Channel');
-            axes[0].grid(alpha=0.5);
-            axes[0].set_ylabel('Channel')
-            axes[1].plot(th232_peak, 'ro', markersize=0.75, label='Th232 Peak Channel');
-            axes[1].grid(alpha=0.5);
-            axes[1].set_ylabel('Channel')
-            axes[0].legend(fancybox=True);
-            axes[1].legend(fancybox=True)
-            axes[0].set_title('Peak locations every 5-minutes')
-            plt.savefig(outPath+i+'/' + i + '_peak_tracking_'+save_string+'.png', format='png', dpi=200)
-    except:
-        pass
-    runAlarms = False
-
+            if False:
+                fig, axes = plt.subplots(nrows=2)
+                axes[0].plot(k40_peak, 'o', markersize=0.75, label='K40 Peak Channel');
+                axes[0].grid(alpha=0.5);
+                axes[0].set_ylabel('Channel')
+                axes[1].plot(th232_peak, 'ro', markersize=0.75, label='Th232 Peak Channel');
+                axes[1].grid(alpha=0.5);
+                axes[1].set_ylabel('Channel')
+                axes[0].legend(fancybox=True);
+                axes[1].legend(fancybox=True)
+                axes[0].set_title('Peak locations every 5-minutes')
+                plt.savefig(outPath+i+'/' + i + '_peak_tracking_'+save_string+'.png', format='png', dpi=200)
+                plt.close('all')
+    #
+    if False:
+        import pandas as pd
+        df = pd.DataFrame({"posix":calc_time,"k40_mean": k40_peak,"k40_r2":k40_r2,"th232_mean":th232_peak,"th232_r2":th232_r2})
+        df.to_csv(outPath+i+'/'+i+'_peak_values.csv', index=False)
+    #
+    runAlarms = True
+    #
     if runAlarms:
         back_windows = 20
         fore_windows = 8
         ksigma_threshold = 10
-        sprt_threshold = 1100
-        roi_counts,ksigma_alarms,ratio = ksigma_RIO_alg(Node_spectra[i],fore_windows,back_windows,ksigma_threshold,'spectra')
+        sprt_threshold = 2200
+        #roi_counts,ksigma_alarms,ratio = ksigma_RIO_alg(Node_spectra[i],fore_windows,back_windows,ksigma_threshold,'spectra')
         sprt_values,sprt_alarms = sprt_alg(Node_counts[i],Node_livetimes[i],fore_windows,back_windows,sprt_threshold)
 
         sprt_indexs = []
         for k, g in groupby(enumerate(sprt_alarms), lambda (i, x): i-x):
             sprt_indexs.append(map(itemgetter(1), g))
-
+        #
+        df = pd.DataFrame({"posix": Node_times[i][sprt_alarms], "sprt alarm": sprt_alarms})
+        df.to_csv(outPath + i +'_'+save_string +"_Alarm_attributes.csv", index=False)
+        '''
         if ( (len(ksigma_alarms)>0)or(len(sprt_alarms)>0) ):
             fig,ax = plt.subplots(figsize=(8,8), nrows=3,sharex=True)
             ax[0].plot(Node_datetimes[i],roi_counts,c=node_colors(i),linewidth=0.75,label=str(i))
@@ -213,25 +224,27 @@ for i in nodes:
                 plt.xticks(rotation=25)
             plt.subplots_adjust(hspace=0.05)
         plt.savefig(outPath+i+'/' + i +'_Alarms_'+save_string+'.png',format='png',dpi=200)
-fig,ax=plt.subplots(6,sharex=True,figsize=(8,7))
-count=0
-for i in nodes:
-    print i
-    ax[count].plot(Node_datetimes[i],Node_counts[i],label=str(i),c=node_colors(i))
-    ax[count].set_xlim(Node_datetimes[i][0], Node_datetimes[i][-1])
-    ax[count].set_ylim(counts_range[i][0], counts_range[i][1])
-    ax[count].grid(alpha=0.5, linewidth=0.5)
-    ax[count].legend(loc='upper right',fancybox=False,shadow=True)
-    count+=1
-ax[5] = plt.gca()
-ax[5].xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
-ax[5].set_xlabel('Date (Hour:Minute:Second)')
-for ax in fig.axes:
-    matplotlib.pyplot.sca(ax)
-    plt.xticks(rotation=25)
-#node_timeseries(Node_times,Node_counts,nodes)
-if True:
-    plt.savefig(outPath+'CPS_'+save_string+'.png',format='png',dpi=200)
+        '''
+if False:
+    fig,ax=plt.subplots(6,sharex=True,figsize=(8,7))
+    count=0
+    for i in nodes:
+        print i
+        ax[count].plot(Node_datetimes[i],Node_counts[i],label=str(i),c=node_colors(i))
+        ax[count].set_xlim(Node_datetimes[i][0], Node_datetimes[i][-1])
+        ax[count].set_ylim(counts_range[i][0], counts_range[i][1])
+        ax[count].grid(alpha=0.5, linewidth=0.5)
+        ax[count].legend(loc='upper right',fancybox=False,shadow=True)
+        count+=1
+    ax[5] = plt.gca()
+    ax[5].xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
+    ax[5].set_xlabel('Date (Hour:Minute:Second)')
+    for ax in fig.axes:
+        matplotlib.pyplot.sca(ax)
+        plt.xticks(rotation=25)
+    #node_timeseries(Node_times,Node_counts,nodes)
+    if True:
+        plt.savefig(outPath+'CPS_'+save_string+'.png',format='png',dpi=200)
 if False:
     plt.show()
 
